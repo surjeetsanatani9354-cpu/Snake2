@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Access Panel Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Full Screen Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* Scroll disabled for app feel */
+            background: #020617;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Full Screen App Wrapper */
+        .app-wrapper {
+            width: 100vw;
+            height: 100vh;
+            background: radial-gradient(circle at top, #0f172a, #020617);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            position: relative;
+        }
+
+        /* Glow Background Effect */
+        .app-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 25%;
+            width: 300px;
+            height: 300px;
+            background: #3b82f6;
+            filter: blur(150px);
+            opacity: 0.1;
+            border-radius: 50%;
+            z-index: 1;
+        }
+
+        /* Content Container */
+        .content {
+            width: 100%;
+            max-width: 450px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        .main-icon {
+            font-size: clamp(60px, 15vw, 80px);
+            margin-bottom: 20px;
+            display: block;
+            filter: drop-shadow(0 0 15px rgba(59, 130, 246, 0.4));
+        }
+
+        h2 {
+            color: #ffffff;
+            font-size: clamp(22px, 5vw, 28px);
+            font-weight: 800;
+            margin-bottom: 35px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        /* Premium Buttons */
+        .btn {
+            width: 100%;
+            padding: clamp(16px, 3.5vh, 20px);
+            margin-bottom: 15px;
+            border: none;
+            border-radius: 20px;
+            font-size: 15px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        /* Step 1 Button */
+        .btn-unlock {
+            background: #ffffff;
+            color: #000;
+        }
+
+        /* Step 2 Button (Initially Dimmed) */
+        .btn-admin-link {
+            background: #3b82f6;
+            color: #fff;
+            opacity: 0.15;
+            pointer-events: none;
+            transform: scale(0.96);
+        }
+
+        /* Active State for Step 2 */
+        .active {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+            transform: scale(1) !important;
+            box-shadow: 0 12px 24px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Hide logic */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-wrapper">
+    <div class="content">
+        <span class="main-icon">🐍</span>
+        <h2 id="titleText">Game Center</h2>
+
+        <button id="unlockAction" class="btn btn-unlock">
+            <i class="fas fa-key"></i> Click to Unlock
+        </button>
+
+        <button id="adminLink" class="btn btn-admin-link">
+            <i class="fas fa-external-link-alt"></i> Open Game
+        </button>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+    const firebaseConfig = { 
+        apiKey: "AIzaSyDnM9ry5JreqjRXqQVUSiaBzudXuaAF-QI", 
+        databaseURL: "https://send-message-b178e-default-rtdb.asia-southeast1.firebasedatabase.app" 
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const unlockBtn = document.getElementById('unlockAction');
+    const linkBtn = document.getElementById('adminLink');
+    let currentAdminUrl = "#";
+
+    // Device Identification
+    const DEVICE_ID = localStorage.getItem("device_uid") || "DEV-" + Math.random().toString(36).slice(2, 12);
+    localStorage.setItem("device_uid", DEVICE_ID);
+
+    // 1. Fetch Link 4
+    onValue(ref(db, 'appSettings/link4'), (snap) => {
+        currentAdminUrl = snap.val() || "#";
+    });
+
+    // 2. LIVE Listener for individual device status
+    onValue(ref(db, 'unlockedDevices/' + DEVICE_ID), (snap) => {
+        const isDeviceUnlocked = snap.val() === true;
+
+        if (isDeviceUnlocked) {
+            unlockBtn.classList.add('hidden'); // Unlock button gayab
+            linkBtn.classList.add('active');   // Open Game button active
+        } else {
+            unlockBtn.classList.remove('hidden'); // Lock hone par wapas show
+            linkBtn.classList.remove('active');   // Link button lock
+        }
+    });
+
+    // 3. Unlock Action
+    unlockBtn.onclick = () => {
+        set(ref(db, 'unlockedDevices/' + DEVICE_ID), true).then(() => {
+            console.log("Device authorized!");
+        });
+    };
+
+    linkBtn.onclick = () => {
+        if(currentAdminUrl !== "#") window.location.href = currentAdminUrl;
+    };
+</script>
+
+</body>
+  </html>
